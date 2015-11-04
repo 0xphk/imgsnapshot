@@ -8,8 +8,10 @@ PID=/var/run/backuppc/BackupPC.pid
 DATE=$(date +%Y%m%d)
 LVORIGIN=xfs_backuppc
 LVSNAP=xfs_backuppc-snap
+LVSIZE=5G
 BACKUPFILE=imgbackup_$DATE.lz
-LOG=/var/log/poolbackup/imgbackup_$DATE.log
+LOGDIR=/var/log/poolbackup
+LOG=$LOGDIR/imgbackup_$DATE.log
 
 ### faster testing
 #LVORIGIN=log
@@ -18,9 +20,9 @@ LOG=/var/log/poolbackup/imgbackup_$DATE.log
 #LOG=/var/log/poolbackup/logbackup_$DATE.log
 
 ### check log folder
-if [[ ! -d /var/log/poolbackup ]];
+if [[ ! -d "$LOGDIR" ]];
   then
-    mkdir -p /var/log/poolbackup
+    mkdir -p "$LOGDIR"
   if [[ ! $? -eq 0 ]];
     then
       echo "can not create log folder, aborting!"
@@ -43,9 +45,9 @@ fi
 ### redump image if last dump failed
 printf "checking last dumpstate\n\n" >> "$LOG"
 
-if sudo -u backup /usr/sbin/amreport agrar | grep -e "FAILED" && printf "last dump failed, try to redump\n\n" >> "$LOG";
+if sudo -u backup /usr/sbin/amreport agrar | grep -e "FAILED" && printf "last dump failed, checking image\n\n" >> "$LOG";
   then
-    if ls /media/amandaspool/imgbackup* > /dev/null 2>&1 && printf "previous image found, dump again\n\n" >> "$LOG";
+    if ls /media/amandaspool/imgbackup* > /dev/null 2>&1 && printf "previous image found, try to redump\n\n" >> "$LOG";
       then
         ### redump manual tapecheck
         if sudo -u backup /usr/sbin/amcheck agrar > /dev/null 2>&1;
@@ -96,7 +98,7 @@ if [[ -L "/dev/mapper/backupgroup-xfs_backuppc--snap" ]];
   fi
     sleep 10
     printf "creating snapshot $LVSNAP\n" >> "$LOG"
-    lvcreate -s -L 5G -n "$LVSNAP" /dev/backupgroup/"$LVORIGIN" >> "$LOG"
+    lvcreate -s -L "$LVSIZE" -n "$LVSNAP" /dev/backupgroup/"$LVORIGIN" >> "$LOG"
     printf "\n" >> "$LOG"
   if [[ ! $? -eq 0 ]];
     then
@@ -106,7 +108,7 @@ if [[ -L "/dev/mapper/backupgroup-xfs_backuppc--snap" ]];
     sleep 10
   else
     printf "creating snapshot $LVSNAP\n" >> "$LOG"
-    lvcreate -s -L 5G -n "$LVSNAP" /dev/backupgroup/"$LVORIGIN" >> "$LOG" #|| printf "snapshot failed" && exit 1
+    lvcreate -s -L "$LVSIZE" -n "$LVSNAP" /dev/backupgroup/"$LVORIGIN" >> "$LOG" #|| printf "snapshot failed" && exit 1
     printf "\n" >> "$LOG"
   if [[ ! $? -eq 0 ]];
     then
@@ -164,7 +166,7 @@ sleep 5
 ### create report, mail, cleanup
 if sudo -u backup /usr/sbin/amreport agrar | grep -e "FAILED";
   then
-    printf "\n!!! - amdump failed\n\n\n\n" >> "$LOG"
+    printf "\n!!! - amdump failed\n\n" >> "$LOG"
     sudo -u backup /usr/sbin/amreport agrar | mail -s "BackupPC pool amdump failed!" root
     rm -f /tmp/tapecheck.successful
     exit 1
