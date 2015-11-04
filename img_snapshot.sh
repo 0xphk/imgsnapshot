@@ -81,6 +81,15 @@ if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED" && printf "l
             printf "cleaning up\n\n" >> "$LOG"
             rm -f /media/amandaspool/imgbackup*
             rm -f /tmp/tapecheck.successful
+            ### start BackupPC process
+            printf "starting BackupPC\n\n" >> "$LOG"
+            systemctl start backuppc.service
+            if [[ ! $? -eq 0 ]];
+              then
+                printf "\n!!! BackupPC failed to start!\n\n exit 1" >> "$LOG"
+                exit 1
+            fi
+            sleep 2
             exit 0
           else
             printf "can not dump, check tape!\n\n" >> "$LOG"
