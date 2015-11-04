@@ -78,6 +78,9 @@ if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED" && printf "l
             printf "amdump successful\n\n" >> "$LOG"
             printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
             sudo -u backup /usr/sbin/amreport "$CUSTOMER" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] BackupPC pool dump successful $(date +%H:%M:%S)" root
+            printf "cleaning up\n\n" >> "$LOG"
+            rm -f /media/amandaspool/imgbackup*
+            rm -f /tmp/tapecheck.successful
             exit 0
           else
             printf "can not dump, check tape!\n\n" >> "$LOG"
@@ -148,7 +151,7 @@ sleep 2
 printf "creating lzop image on /media/amandaspool\n\n" >> "$LOG"
 #printf "testrun! with small image\n\n" >> "$LOG"
 
-if pv /dev/backupgroup/"$LVSNAP" 2> /dev/null | lzop | cat > /media/amandaspool/"$BACKUPFILE";
+if pv -q /dev/backupgroup/"$LVSNAP" | lzop | cat > /media/amandaspool/"$BACKUPFILE";
   then
     printf "image created successfully\n\n" >>"$LOG"
   else
