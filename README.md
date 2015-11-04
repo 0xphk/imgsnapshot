@@ -22,3 +22,10 @@
 * old backup in holding disk
 * existing snapshot
 * last amdump status
+
+##### todo
+
+* add var for volgroup
+* rewriting logging 
+* testing redump
+* removing debug helper
