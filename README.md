@@ -8,12 +8,13 @@
 * tests most success/fail cases
 * quick and dirty logging feature
 * redump if last amdump failed
+* using pv is slightly faster than dd
 
 ##### common vars
 
 * logging: path, filename
 * snapshot: size, name, origin
-* various: pidfile, backupfile, date
+* various: pidfile, backupfile, date, customer
 
 ##### checks
 
@@ -29,3 +30,4 @@
 * rewriting logging 
 * testing redump
 * removing debug helper
+* suppress stderr output

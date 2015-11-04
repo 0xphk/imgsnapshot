@@ -1,17 +1,33 @@
 #!/bin/bash
 
+###################################################
+#                                                 #
+#  img_snapshot.sh                                #
+#  automating BackupPC pool backup with amanda    #
+#  using lvm2 snapshot and lzop compressed image  #
+#                                                 #
+#  https://github.com/0xphk/imgsnapshot           #
+#  https://zmanda.com/                            #
+#  http://backuppc.sourceforge.net/               #
+#                                                 #
+###################################################
+
+
+### debug
 set -x
 
 LANG=C
 
+### vars
 PID=/var/run/backuppc/BackupPC.pid
 DATE=$(date +%Y%m%d)
 LVORIGIN=xfs_backuppc
 LVSNAP=xfs_backuppc-snap
 LVSIZE=5G
-BACKUPFILE=imgbackup_$DATE.lz
 LOGDIR=/var/log/poolbackup
 LOG=$LOGDIR/imgbackup_$DATE.log
+BACKUPFILE=imgbackup_$DATE.lz
+CUSTOMER=agrar
 
 ### faster testing
 #LVORIGIN=log
@@ -45,23 +61,23 @@ fi
 ### redump image if last dump failed
 printf "checking last dumpstate\n\n" >> "$LOG"
 
-if sudo -u backup /usr/sbin/amreport agrar | grep -e "FAILED" && printf "last dump failed, checking image\n\n" >> "$LOG";
+if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED" && printf "last dump failed, checking image\n\n" >> "$LOG";
   then
     if ls /media/amandaspool/imgbackup* > /dev/null 2>&1 && printf "previous image found, try to redump\n\n" >> "$LOG";
       then
         ### redump manual tapecheck
-        if sudo -u backup /usr/sbin/amcheck agrar > /dev/null 2>&1;
-          then sudo -u backup /usr/sbin/amdump agrar
+        if sudo -u backup /usr/sbin/amcheck "$CUSTOMER" > /dev/null 2>&1;
+          then sudo -u backup /usr/sbin/amdump "$CUSTOMER"
             if [[ ! $? -eq 0 ]];
               then
                 printf "amdump failed again!\n\n" >> "$LOG"
                 printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
-                sudo -u backup /usr/sbin/amreport agrar | tee -a "$LOG" | mail -s "BackupPC pool redump failed!" root
+                sudo -u backup /usr/sbin/amreport "$CUSTOMER" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] pool redump failed! $(date +%H:%M:%S)" root
                 exit 1
             fi
             printf "amdump successful\n\n" >> "$LOG"
             printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
-            sudo -u backup /usr/sbin/amreport agrar | tee -a "$LOG" | mail -s "BackupPC pool amdump successful" root
+            sudo -u backup /usr/sbin/amreport "$CUSTOMER" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] BackupPC pool dump successful $(date +%H:%M:%S)" root
             exit 0
           else
             printf "can not dump, check tape!\n\n" >> "$LOG"
@@ -132,7 +148,7 @@ sleep 2
 printf "creating lzop image on /media/amandaspool\n\n" >> "$LOG"
 #printf "testrun! with small image\n\n" >> "$LOG"
 
-if pv /dev/backupgroup/"$LVSNAP" | lzop | cat > /media/amandaspool/"$BACKUPFILE";
+if pv /dev/backupgroup/"$LVSNAP" 2> /dev/null | lzop | cat > /media/amandaspool/"$BACKUPFILE";
   then
     printf "image created successfully\n\n" >>"$LOG"
   else
@@ -144,7 +160,7 @@ printf "removing snapshot $LVSNAP\n" >> "$LOG"
 lvremove -f /dev/backupgroup/"$LVSNAP" >> "$LOG"
 if [[ ! $? -eq 0 ]];
   then
-    printf "\n!!! can not remove snapshot, has to removed manually!\n\n exit 1" >> "$LOG"
+    printf "\n!!! can not remove snapshot, must be removed manually!\n\n exit 1" >> "$LOG"
 fi
 
 ### dump to tape
@@ -154,26 +170,25 @@ printf "checking tape\n\n" >> "$LOG"
 if [[ -e /tmp/tapecheck.successful ]];
   then
     printf "valid tape found, running amdump\n\n" >> "$LOG"
-    sudo -u backup /usr/sbin/amdump agrar || printf "amdump failed!\n\n" >> "$LOG"
+    sudo -u backup /usr/sbin/amdump "$CUSTOMER" || printf "amdump failed!\n\n" >> "$LOG"
 
     printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
-    sudo -u backup /usr/sbin/amreport agrar >> "$LOG"
+    sudo -u backup /usr/sbin/amreport "$CUSTOMER" >> "$LOG"
   else
     printf "\n!!! no valid tape found, aborting!\n\n exit 2" >> "$LOG"
 fi
 sleep 5
 
 ### create report, mail, cleanup
-if sudo -u backup /usr/sbin/amreport agrar | grep -e "FAILED";
+if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED";
   then
-    printf "\n!!! - amdump failed\n\n" >> "$LOG"
-    sudo -u backup /usr/sbin/amreport agrar | mail -s "BackupPC pool amdump failed!" root
+    printf "\n!!! - amdump failed $(date +%Y%m%d\ %H:%M:%S)\n\n" >> "$LOG"
+    sudo -u backup /usr/sbin/amreport "$CUSTOMER" | mail -s "\[$CUSTOMER\] pool dump failed! $(date +%H:%M:%S)" root
     rm -f /tmp/tapecheck.successful
     exit 1
   else
     printf "\n\n" >> "$LOG"
-    printf "amdump successful $(date)\n\n"  >> "$LOG"
-    sudo -u backup /usr/sbin/amreport agrar | mail -s "BackupPC pool amdump successful" root
+    sudo -u backup /usr/sbin/amreport "$CUSTOMER" | mail -s "\[$CUSTOMER\] pool dump successful $(date +%H:%M:%S)" root
     rm -f /media/amandaspool/imgbackup*
     rm -f /tmp/tapecheck.successful
     exit 0
