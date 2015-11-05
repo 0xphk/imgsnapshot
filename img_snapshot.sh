@@ -20,6 +20,7 @@ LANG=C
 ### vars
 PID=/var/run/backuppc/BackupPC.pid
 DATE=$(date +%Y%m%d)
+VOLGRP=backupgroup
 LVORIGIN=xfs_backuppc
 LVSNAP=xfs_backuppc-snap
 LVSIZE=5G
@@ -114,10 +115,10 @@ if ls /media/amandaspool/imgbackup* > /dev/null 2>&1;
 fi
 
 ### check/create snapshot
-if [[ -L "/dev/mapper/backupgroup-xfs_backuppc--snap" ]];
+if [[ -L "/dev/mapper/$VOLGRP-$LVORIGIN--snap" ]];
   then
     printf "Existing snapshot detected, $(lvs | grep "$LVSNAP" | awk '{ print $6 }')% used, removing\n\n" >> "$LOG"
-    lvremove -f /dev/backupgroup/"$LVSNAP" >> "$LOG"
+    lvremove -f /dev/"$VOLGRP"/"$LVSNAP" >> "$LOG"
     printf "\n" >> "$LOG"
   if [[ ! $? -eq 0 ]];
     then
@@ -126,7 +127,7 @@ if [[ -L "/dev/mapper/backupgroup-xfs_backuppc--snap" ]];
   fi
     sleep 10
     printf "creating snapshot $LVSNAP\n" >> "$LOG"
-    lvcreate -s -L "$LVSIZE" -n "$LVSNAP" /dev/backupgroup/"$LVORIGIN" >> "$LOG"
+    lvcreate -s -L "$LVSIZE" -n "$LVSNAP" /dev/"$VOLGRP"/"$LVORIGIN" >> "$LOG"
     printf "\n" >> "$LOG"
   if [[ ! $? -eq 0 ]];
     then
@@ -136,7 +137,7 @@ if [[ -L "/dev/mapper/backupgroup-xfs_backuppc--snap" ]];
     sleep 10
   else
     printf "creating snapshot $LVSNAP\n" >> "$LOG"
-    lvcreate -s -L "$LVSIZE" -n "$LVSNAP" /dev/backupgroup/"$LVORIGIN" >> "$LOG" #|| printf "snapshot failed" && exit 1
+    lvcreate -s -L "$LVSIZE" -n "$LVSNAP" /dev/"$VOLGRP"/"$LVORIGIN" >> "$LOG" #|| printf "snapshot failed" && exit 1
     printf "\n" >> "$LOG"
   if [[ ! $? -eq 0 ]];
     then
@@ -158,9 +159,8 @@ sleep 2
 
 ### create imagefile
 printf "creating lzop image on /media/amandaspool\n\n" >> "$LOG"
-#printf "testrun! with small image\n\n" >> "$LOG"
 
-if pv -q /dev/backupgroup/"$LVSNAP" | lzop | cat > /media/amandaspool/"$BACKUPFILE";
+if pv -q /dev/"$VOLGRP"/"$LVSNAP" | lzop | cat > /media/amandaspool/"$BACKUPFILE";
   then
     printf "image created successfully\n\n" >>"$LOG"
   else
@@ -169,7 +169,7 @@ fi
 sleep 2
 
 printf "removing snapshot $LVSNAP\n" >> "$LOG"
-lvremove -f /dev/backupgroup/"$LVSNAP" >> "$LOG"
+lvremove -f /dev/"$VOLGRP"/"$LVSNAP" >> "$LOG"
 if [[ ! $? -eq 0 ]];
   then
     printf "\n!!! can not remove snapshot, must be removed manually!\n\n exit 1" >> "$LOG"
@@ -182,7 +182,7 @@ printf "checking tape\n\n" >> "$LOG"
 if [[ -e /tmp/tapecheck.successful ]];
   then
     printf "valid tape found, running amdump\n\n" >> "$LOG"
-    sudo -u backup /usr/sbin/amdump "$CUSTOMER" || printf "amdump failed!\n\n" >> "$LOG"
+    sudo -u backup /usr/sbin/amdump "$CUSTOMER" && printf "amdump successful $(date +%H:%M:%S)\n\n" >> "$LOG" || printf "amdump failed! $(date +%H:%M:%S)\n\n" >> "$LOG"
     printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
     sudo -u backup /usr/sbin/amreport "$CUSTOMER" >> "$LOG"
   else
@@ -194,12 +194,10 @@ sleep 5
 ### create report, mail, cleanup
 if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED";
   then
-    printf "\n!!! - amdump failed $(date +%Y%m%d\ %H:%M:%S)\n\n" >> "$LOG"
     sudo -u backup /usr/sbin/amreport "$CUSTOMER" | mail -s "\[$CUSTOMER\] pool dump failed! $(date +%H:%M:%S)" root
     rm -f /tmp/tapecheck.successful
     exit 1
   else
-    printf "\n\n" >> "$LOG"
     sudo -u backup /usr/sbin/amreport "$CUSTOMER" | mail -s "\[$CUSTOMER\] pool dump successful $(date +%H:%M:%S)" root
     rm -f /media/amandaspool/imgbackup*
     rm -f /tmp/tapecheck.successful
