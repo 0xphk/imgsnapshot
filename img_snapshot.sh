@@ -6,7 +6,6 @@
 #  automating BackupPC pool backup with amanda    #
 #  using lvm2 snapshot and lzop compressed image  #
 #                                                 #
-#  https://github.com/0xphk/imgsnapshot           #
 #  https://zmanda.com/                            #
 #  http://backuppc.sourceforge.net/               #
 #                                                 #
@@ -67,14 +66,15 @@ if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED" && printf "l
       then
         ### redump manual tapecheck
         if sudo -u backup /usr/sbin/amcheck "$CUSTOMER" > /dev/null 2>&1;
-          then sudo -u backup /usr/sbin/amdump "$CUSTOMER"
-            if [[ ! $? -eq 0 ]];
-              then
-                printf "amdump failed again!\n\n" >> "$LOG"
-                printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
-                sudo -u backup /usr/sbin/amreport "$CUSTOMER" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] pool redump failed! $(date +%H:%M:%S)" root
-                exit 1
-            fi
+          then
+            sudo -u backup /usr/sbin/amdump "$CUSTOMER"
+              if [[ ! $? -eq 0 ]];
+                then
+                  printf "amdump failed again!\n\n" >> "$LOG"
+                  printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
+                  sudo -u backup /usr/sbin/amreport "$CUSTOMER" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] pool redump failed! $(date +%H:%M:%S)" root
+                  exit 1
+              fi
             printf "amdump successful\n\n" >> "$LOG"
             printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
             sudo -u backup /usr/sbin/amreport "$CUSTOMER" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] BackupPC pool dump successful $(date +%H:%M:%S)" root
@@ -84,11 +84,11 @@ if sudo -u backup /usr/sbin/amreport "$CUSTOMER" | grep -e "FAILED" && printf "l
             ### start BackupPC process
             printf "starting BackupPC\n\n" >> "$LOG"
             systemctl start backuppc.service
-            if [[ ! $? -eq 0 ]];
-              then
-                printf "\n!!! BackupPC failed to start!\n\n exit 1" >> "$LOG"
-                exit 1
-            fi
+              if [[ ! $? -eq 0 ]];
+                then
+                  printf "\n!!! BackupPC failed to start!\n\n" >> "$LOG"
+                  exit 1
+              fi
             sleep 2
             exit 0
           else
@@ -110,13 +110,13 @@ if ls /media/amandaspool/imgbackup* > /dev/null 2>&1;
     printf "old backupfile found, removing\n\n" >> "$LOG"
     rm -f /media/amandaspool/imgbackuppc*
   else
-    echo "nothing to clean up\n\n" >> "$LOG"
+    printf "nothing to clean up\n\n" >> "$LOG"
 fi
 
 ### check/create snapshot
 if [[ -L "/dev/mapper/backupgroup-xfs_backuppc--snap" ]];
   then
-    printf "Existing snapshot detected, $(lvs | grep "$LVSNAP" | awk '{ print $6 }') % used, removing\n\n" >> "$LOG"
+    printf "Existing snapshot detected, $(lvs | grep "$LVSNAP" | awk '{ print $6 }')% used, removing\n\n" >> "$LOG"
     lvremove -f /dev/backupgroup/"$LVSNAP" >> "$LOG"
     printf "\n" >> "$LOG"
   if [[ ! $? -eq 0 ]];
@@ -183,11 +183,11 @@ if [[ -e /tmp/tapecheck.successful ]];
   then
     printf "valid tape found, running amdump\n\n" >> "$LOG"
     sudo -u backup /usr/sbin/amdump "$CUSTOMER" || printf "amdump failed!\n\n" >> "$LOG"
-
     printf "\nAmanda Report:\n--------------\n\n" >> "$LOG"
     sudo -u backup /usr/sbin/amreport "$CUSTOMER" >> "$LOG"
   else
-    printf "\n!!! no valid tape found, aborting!\n\n exit 2" >> "$LOG"
+    printf "\n!!! no valid tape found, aborting!\n\n" | tee -a "$LOG" | mail -s "\[$CUSTOMER\] pool dump failed! $(date +%H:%M:%S)" root
+    exit 1
 fi
 sleep 5
 
