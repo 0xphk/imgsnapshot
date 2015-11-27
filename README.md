@@ -26,7 +26,7 @@
 
 ##### todo
 
-* add var for volgroup
+* ~add var for volgroup~
 * rewriting logging 
 * testing redump
 * removing debug helper
