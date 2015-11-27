@@ -1,5 +1,5 @@
 SHELL=/bin/bash
-MAILTO=backup@bcs.bcs
+MAILTO=root
 
 ### run nas backup if drbd res is in primary role
 

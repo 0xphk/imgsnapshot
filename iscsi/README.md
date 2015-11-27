@@ -17,6 +17,7 @@
 ##### checks
 
 * logdir
+* drbd resource role (primary/secondary)
 * remote BackupPC process (pidfile)
 * old backup in holding disk
 * existing snapshot
