@@ -17,7 +17,7 @@
 ##### checks
 
 * logdir
-* BackupPC process (pidfile)
+* remote BackupPC process (pidfile)
 * old backup in holding disk
 * existing snapshot
 
