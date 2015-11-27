@@ -1,0 +1,7 @@
+SHELL=/bin/bash
+MAILTO=backup@bcs.bcs
+
+### run nas backup if drbd res is in primary role
+
+# m h dom mon dow user  command
+0 22 * * 6 root if [[ $(drbdadm get-gi backuppc | cut -d":" -f7) -eq 1 ]]; then /etc/nasbackup/nasbackup.sh > /dev/null; fi
