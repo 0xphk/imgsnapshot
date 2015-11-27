@@ -221,6 +221,8 @@ if [[ ! $? -eq 0 ]];
     printf "disconnecting from iSCSI target $ISCSI_TARGET failed\n\n" >> $LOG
     exit 1
 fi
+
 printf "\n" >> $LOG
 printf "backupfile created $(date)\n\n" >> $LOG
+
 exit 0
