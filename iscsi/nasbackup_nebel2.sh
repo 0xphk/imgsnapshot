@@ -2,7 +2,7 @@
 
 ###################################################
 #                                                 #
-#  iscsi_snapshot.sh on nebel2                    #
+#  nasbackup.sh on nebel2                         #
 #  automating BackupPC pool backup to iscsi-lun   #
 #  using lvm2 snapshot and lzop compressed image  #
 #                                                 #
