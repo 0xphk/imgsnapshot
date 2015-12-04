@@ -83,9 +83,10 @@ ssh root@backuppc1.bcs.bcs -- /bin/bash -c /var/lib/backuppc/bin/stop_backuppc.s
 if [[ ! $? -eq 0 ]];
   then
     printf "stopping BackupPC failed, aborting! check service on backuppc1.bcs.bcs\n\n" >> $LOG
+    $ISCSI_CMD --logout >> $LOG
     exit 1
 fi
-printf "Backuppc stopped\n\n" >> $LOG
+printf "Backuppc stopped, pool unmounted\n\n" >> $LOG
 sleep 5
 
 ### check/create snapshot
@@ -94,30 +95,33 @@ if [[ -L "/dev/mapper/$VOLGRP-$LVORIGIN--snap" ]];
     printf "Existing snapshot detected, $(lvs | grep "$LVSNAP" | awk '{ print $6 }')% used, removing\n\n" >> $LOG
     lvremove -f /dev/$VOLGRP/$LVSNAP >> $LOG
     printf "\n" >> $LOG
-  if [[ ! $? -eq 0 ]];
-    then
-      printf "\n" "!!! can not remove snapshot, aborting!\n\n" >> $LOG
-      exit 1
-  fi
+      if [[ ! $? -eq 0 ]];
+        then
+          printf "\n" "!!! can not remove snapshot, aborting!\n\n" >> $LOG
+          $ISCSI_CMD --logout >> $LOG
+          exit 1
+      fi
     sleep 5
     printf "creating snapshot $LVSNAP\n" >> $LOG
     lvcreate -s -L $LVSIZE -n $LVSNAP /dev/$VOLGRP/$LVORIGIN >> $LOG
     printf "\n" >> $LOG
-  if [[ ! $? -eq 0 ]];
-    then
-      printf "\n" "!!! can not create snapshot, aborting!\n\n exit 1" >> $LOG
-      exit 1
-  fi
+      if [[ ! $? -eq 0 ]];
+        then
+          printf "\n" "!!! can not create snapshot, aborting!\n\n exit 1" >> $LOG
+          $ISCSI_CMD --logout >> $LOG
+        exit 1
+      fi
     sleep 5
   else
     printf "creating snapshot $LVSNAP\n" >> $LOG
     lvcreate -s -L $LVSIZE -n $LVSNAP /dev/$VOLGRP/$LVORIGIN >> $LOG
     printf "\n" >> $LOG
-  if [[ ! $? -eq 0 ]];
-    then
-      printf "\n" "!!! can not create snapshot, aborting!\n\n" >> $LOG
-      exit 1
-  fi
+      if [[ ! $? -eq 0 ]];
+        then
+        printf "\n" "!!! can not create snapshot, aborting!\n\n" >> $LOG
+        $ISCSI_CMD --logout >> $LOG
+        exit 1
+      fi
     sleep 5
 fi
 
@@ -144,8 +148,8 @@ printf "removing snapshot $LVSNAP\n" >> $LOG
 lvremove -f /dev/$VOLGRP/$LVSNAP >> $LOG
 if [[ ! $? -eq 0 ]];
   then
-    printf "\n"
-    printf "!!! can not remove snapshot, must be removed manually!\n\n" >> $LOG
+    printf "\n" "!!! can not remove snapshot, must be removed manually!\n\n" >> $LOG
+    $ISCSI_CMD --logout >> $LOG
     exit 1
 fi
 sleep 5
@@ -156,12 +160,10 @@ printf "logout from iSCSI target\n\n" >> $LOG
 $ISCSI_CMD --logout >> $LOG
 if [[ ! $? -eq 0 ]];
   then
-    printf "\n" >> $LOG
-    printf "disconnecting from iSCSI target $ISCSI_TARGET failed\n\n" >> $LOG
+    printf "\n" "disconnecting from iSCSI target $ISCSI_TARGET failed\n\n" >> $LOG
     exit 1
 fi
 
-printf "\n" >> $LOG
-printf "poolbackup created $(date)\n\n" >> $LOG
+printf "\n" "poolbackup created $(date)\n\n" >> $LOG
 
 exit 0
