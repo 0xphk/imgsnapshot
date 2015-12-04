@@ -19,6 +19,7 @@
 * logdir
 * drbd resource role (primary/secondary)
 * remote BackupPC process (pidfile)
+* unmount pool to preserve clean fs
 * ~~old backup in holding disk~~
 * existing snapshot
 
