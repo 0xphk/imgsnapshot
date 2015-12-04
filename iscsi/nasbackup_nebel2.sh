@@ -2,7 +2,7 @@
 
 ###################################################
 #                                                 #
-#  nasbackup.sh on nebel1                         #
+#  nasbackup.sh on nebel2                         #
 #  automating BackupPC pool backup to iscsi-lun   #
 #  using lvm2 snapshot and block based copy       #
 #                                                 #
@@ -79,7 +79,7 @@ sleep 5
 
 ### stop remote BackupPC process
 printf "\n" "stopping remote BackupPC process on backuppc1.bcs.bcs\n\n" >> $LOG
-ssh root@backuppc1.bcs.bcs -- /bin/bash -c /var/lib/backuppc/bin/stop_backuppc.sh
+ssh root@backuppc1.bcs.bcs -- /bin/bash -c /usr/local/sbin/stop_backuppc.sh
 if [[ ! $? -eq 0 ]];
   then
     printf "stopping BackupPC failed, aborting! check service on backuppc1.bcs.bcs\n\n" >> $LOG
@@ -97,7 +97,8 @@ if [[ -L "/dev/mapper/$VOLGRP-$LVORIGIN--snap" ]];
     printf "\n" >> $LOG
       if [[ ! $? -eq 0 ]];
         then
-          printf "\n" "!!! can not remove snapshot, aborting!\n\n" >> $LOG
+          printf "\n" >> $LOG
+          printf "!!! can not remove snapshot, aborting!\n\n" >> $LOG
           $ISCSI_CMD --logout >> $LOG
           exit 1
       fi
@@ -107,7 +108,8 @@ if [[ -L "/dev/mapper/$VOLGRP-$LVORIGIN--snap" ]];
     printf "\n" >> $LOG
       if [[ ! $? -eq 0 ]];
         then
-          printf "\n" "!!! can not create snapshot, aborting!\n\n exit 1" >> $LOG
+          printf "\n" >> $LOG
+          printf "!!! can not create snapshot, aborting!\n\n exit 1" >> $LOG
           $ISCSI_CMD --logout >> $LOG
         exit 1
       fi
@@ -118,7 +120,8 @@ if [[ -L "/dev/mapper/$VOLGRP-$LVORIGIN--snap" ]];
     printf "\n" >> $LOG
       if [[ ! $? -eq 0 ]];
         then
-        printf "\n" "!!! can not create snapshot, aborting!\n\n" >> $LOG
+        printf "\n" >> $LOG
+        printf "!!! can not create snapshot, aborting!\n\n" >> $LOG
         $ISCSI_CMD --logout >> $LOG
         exit 1
       fi
@@ -126,7 +129,7 @@ if [[ -L "/dev/mapper/$VOLGRP-$LVORIGIN--snap" ]];
 fi
 
 ## start BackupPC process
-ssh root@backuppc1.bcs.bcs -- /bin/bash -c /var/lib/backuppc/bin/start_backuppc.sh
+ssh root@backuppc1.bcs.bcs -- /bin/bash -c /usr/local/sbin/start_backuppc.sh
 if [[ ! $? -eq 0 ]];
   then
     printf "BackupPC failed to start, check service on backuppc1.bcs.bcs\n\n" >> $LOG
@@ -134,6 +137,7 @@ fi
 printf "Backuppc started\n\n" >> $LOG
 sleep 5
 
+#printf "dryrun\n\n---\n\n" >> $LOG
 printf "creating block based copy on $ISCSI_PATH\n\n" >> $LOG
 if dd if=/dev/$VOLGRP/$LVSNAP of=/dev/disk/by-path/ip-10.110.1.140\:3260-iscsi-iqn.2012.bcs.bcsnas\:backuppc-lun-0 bs=16M 2>>$LOG:
   then
@@ -148,7 +152,8 @@ printf "removing snapshot $LVSNAP\n" >> $LOG
 lvremove -f /dev/$VOLGRP/$LVSNAP >> $LOG
 if [[ ! $? -eq 0 ]];
   then
-    printf "\n" "!!! can not remove snapshot, must be removed manually!\n\n" >> $LOG
+    printf "\n" >> $LOG
+    printf "!!! can not remove snapshot, must be removed manually!\n\n" >> $LOG
     $ISCSI_CMD --logout >> $LOG
     exit 1
 fi
@@ -160,10 +165,12 @@ printf "logout from iSCSI target\n\n" >> $LOG
 $ISCSI_CMD --logout >> $LOG
 if [[ ! $? -eq 0 ]];
   then
-    printf "\n" "disconnecting from iSCSI target $ISCSI_TARGET failed\n\n" >> $LOG
+    printf "\n" >> $LOG
+    printf "disconnecting from iSCSI target $ISCSI_TARGET failed\n\n" >> $LOG
     exit 1
 fi
 
-printf "\n" "poolbackup created $(date)\n\n" >> $LOG
+printf "\n" >> $LOG
+printf "poolbackup created $(date)\n\n" >> $LOG
 
 exit 0
