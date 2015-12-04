@@ -78,7 +78,8 @@ done
 sleep 5
 
 ### stop remote BackupPC process
-printf "\n" "stopping remote BackupPC process on backuppc1.bcs.bcs\n\n" >> $LOG
+printf "\n" >> $LOG
+printf "stopping remote BackupPC process on backuppc1.bcs.bcs\n\n" >> $LOG
 ssh root@backuppc1.bcs.bcs -- /bin/bash -c /usr/local/sbin/stop_backuppc.sh
 if [[ ! $? -eq 0 ]];
   then
