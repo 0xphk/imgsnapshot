@@ -1,6 +1,6 @@
 SHELL=/bin/bash
 MAILTO=root
-
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 ### run nas backup if drbd res is in primary role
 
 # m h dom mon dow user  command
