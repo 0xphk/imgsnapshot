@@ -28,7 +28,7 @@ LVSIZE=50G
 
 ISCSI_TARGET="iqn.2012.bcs.bcsnas:backuppc"
 ISCSI_PATH="/dev/disk/by-path/ip-10.110.1.140\:3260-iscsi-iqn.2012.bcs.bcsnas\:backuppc-lun-0"
-ISCSI_CMD="iscsiadm -m node --target $ISCSI_TARGET --portal 10.110.1.140" # options --login | --logout
+ISCSI_CMD="/usr/bin/iscsiadm -m node --target $ISCSI_TARGET --portal 10.110.1.140" # options --login | --logout
 
 ### check log folder
 if [[ ! -d $LOGDIR ]];
@@ -45,7 +45,7 @@ fi
 printf "$(date)\n\n" > $LOG
 
 ### check primary/secondary role of backuppc pool and set var for volumegroup
-if [[ $(drbdadm get-gi backuppc | cut -d":" -f7) -eq 1 ]];
+if [[ $(/sbin/drbdadm get-gi backuppc | cut -d":" -f7) -eq 1 ]];
   then
     printf "backuppc pool ist currently in primary role\n\n" >> $LOG
     VOLGRP=nebel2group
