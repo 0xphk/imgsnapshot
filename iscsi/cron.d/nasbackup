@@ -1,7 +1,8 @@
 SHELL=/bin/bash
-MAILTO=root
+MAILTO=backup@bcs.bcs
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-### run nas backup if drbd res is in primary role
+### run nasbackup
 
 # m h dom mon dow user  command
-0 22 * * 6 root if [[ $(drbdadm get-gi backuppc | cut -d":" -f7) -eq 1 ]]; then /etc/nasbackup/nasbackup.sh > /dev/null; fi
+# 0 22 * * 6 root if [[ $(/sbin/drbdadm get-gi backuppc | cut -d":" -f7) -eq 1 ]]; then /etc/nasbackup/nasbackup.sh > /dev/null; fi
+0 22 * * 6 root /etc/nasbackup/nasbackup.sh > /dev/null
