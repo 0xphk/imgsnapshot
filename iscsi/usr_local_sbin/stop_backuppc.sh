@@ -7,6 +7,6 @@ if [[ -f "$PID" ]];
   then
     service backuppc stop || exit 1
     sleep 5
-    umount /var/lib/backuppc || exit 1
+    umount -l /var/lib/backuppc || exit 1
 fi
 exit 0
