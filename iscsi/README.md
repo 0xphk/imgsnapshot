@@ -2,8 +2,7 @@
 
 ##### quick features
 
-* based on lvm2 snapshots
-* block based dd copy for faster backup and restore
+* block based on lvm2 snapshots
 * ~~using lzop compression~~
 * tests most success/fail cases
 * quick and dirty logging feature
@@ -17,7 +16,7 @@
 ##### checks
 
 * logdir
-* drbd resource role (primary/secondary)
+* ~~drbd resource role (primary/secondary)~~
 * remote BackupPC process (pidfile)
 * unmount pool to preserve clean fs
 * ~~old backup in holding disk~~
@@ -28,3 +27,4 @@
 * more testing
 * determine best blocksize
 * fixing comments
+* robust logging

@@ -18,6 +18,7 @@ CUSTOMER=bcs
 DATE=$(date +%Y%m%d)
 LOGDIR=/var/log/poolbackup
 LOG=$LOGDIR/nasbackup_$DATE.log
+MAIL=backup@bcs.bcs
 VOLGRP=nebel1group
 LVORIGIN=fordrbd_backuppc
 LVSNAP=fordrbd_backuppc-snap
@@ -72,10 +73,10 @@ if [[ $? -eq 0 ]];
       if [[ $? -eq 0 ]];
         then
           sleep 5
-          ssh root@backuppc1 umount -l /var/lib/backuppc
+          ssh root@backuppc1 umount -l /var/lib/backuppc # lazy umount
           printf "stopped BackupPC & unmounted /var/lib/backuppc\n\n" >> $LOG
         else
-          printf "stopping BackupPC failed, aborting! check service on backuppc1.bcs.bcs\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] stop backuppc failed $(date +%H:%M:%S)" root
+          printf "stopping BackupPC failed, aborting! check service on backuppc1.bcs.bcs\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] stop backuppc failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
           $ISCSI_CMD --logout >> $LOG
           exit 1
       fi
@@ -126,7 +127,7 @@ fi
 ssh root@backuppc1.bcs.bcs mount /var/lib/backuppc
 if [[ ! $? -eq 0 ]];
   then
-    printf "mount /var/lib/backuppc failed, check this!" | tee -a $LOG | mail -s "[$CUSTOMER] /var/lib/backuppc mount failed $(date +%H:%M:%S)" root
+    printf "mount /var/lib/backuppc failed, check this!" | tee -a $LOG | mail -s "[$CUSTOMER] /var/lib/backuppc mount failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
     exit 1
 fi
 ssh root@backuppc1.bcs.bcs service backuppc start
@@ -135,7 +136,7 @@ if [[ $? -eq 0 ]];
     printf "Backuppc started\n\n" >> $LOG
     sleep 5
   else
-    printf "BackupPC start failed, check service!" | tee -a $LOG | mail -s "[$CUSTOMER] backuppc service failed $(date +%H:%M:%S)" root
+    printf "BackupPC start failed, check service!" | tee -a $LOG | mail -s "[$CUSTOMER] backuppc service failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
     exit 1
 fi
 
@@ -143,9 +144,9 @@ fi
 printf "creating block based copy on $ISCSI_PATH\n\n" >> $LOG
 if dd if=/dev/$VOLGRP/$LVSNAP of=/dev/disk/by-path/ip-10.110.1.140\:3260-iscsi-iqn.2012.bcs.bcsnas\:backuppc-lun-0 bs=16M 2>>$LOG:
   then
-    printf "snapshot cloned successfully\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup successful $(date +%H:%M:%S)" root
+    printf "snapshot cloned successfully\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup successful $(date +%Y%m%d\ %H:%M:%S)" $MAIL
   else
-    printf "snapshot clone failed\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup failed $(date +%H:%M:%S)" root
+    printf "snapshot clone failed\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
 fi
 sleep 5
 
