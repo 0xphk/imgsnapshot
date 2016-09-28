@@ -43,10 +43,9 @@ printf "$(date)\n\n" > $LOG
 
 ### connect to iSCSI target
 printf "logout from possible previous session $ISCSI_TARGET\n\n" >> $LOG
-$ISCSI_CMD --logout >> $LOG
+$ISCSI_CMD --logout 2>&1 >> $LOG
 sleep 5
 
-#exit 1
 printf "connecting to iSCSI target $ISCSI_TARGET\n\n" >> $LOG
 $ISCSI_CMD --login >> $LOG
 if [[ ! $? -eq 0 ]];
@@ -63,8 +62,17 @@ while [ ! -e /dev/disk/by-path/ip-10.110.1.140\:3260-iscsi-iqn.2012.bcs.bcsnas\:
 done
 sleep 5
 
-### stop remote BackupPC process
+### check if vm is responsible, then stop remote BackupPC process, else exit 1
 printf "\n" >> $LOG
+printf "check if vm backuppc1.bcs.bcs is running\n\n" >> $LOG
+if ping -c3 backuppc1.bcs.bcs;
+  then
+    printf "backuppc1.bcs.bcs is running, going on\n\n" >> $LOG
+  else
+    printf "backuppc1.bcs.bcs is NOT running, aborting & cleaning up! check this!\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] vm backuppc1.bcs.bcs NOT running/responding $(date +%Y%m%d\ %H:%M:%S)" $MAIL
+    $ISCSI_CMD --logout >> $LOG
+fi
+
 printf "stopping remote BackupPC process on backuppc1.bcs.bcs\n\n" >> $LOG
 ssh root@backuppc1.bcs.bcs test -e /var/run/backuppc/BackupPC.pid
 if [[ $? -eq 0 ]];
@@ -73,7 +81,7 @@ if [[ $? -eq 0 ]];
       if [[ $? -eq 0 ]];
         then
           sleep 5
-          ssh root@backuppc1 umount -l /var/lib/backuppc # lazy umount
+          ssh root@backuppc1 umount -l /var/lib/backuppc
           printf "stopped BackupPC & unmounted /var/lib/backuppc\n\n" >> $LOG
         else
           printf "stopping BackupPC failed, aborting! check service on backuppc1.bcs.bcs\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] stop backuppc failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
@@ -81,7 +89,9 @@ if [[ $? -eq 0 ]];
           exit 1
       fi
   else
-    printf "BackupPC is not running\n\n" >> $LOG
+    printf "BackupPC is not running, unmounting pool\n\n" >> $LOG
+    ssh root@backuppc1 umount -l /var/lib/backuppc
+    printf "unmounted /var/lib/backuppc\n\n" >> $LOG
 fi
 
 ### check/create snapshot
@@ -142,11 +152,11 @@ fi
 
 #printf "dryrun\n\n---\n\n" >> $LOG
 printf "creating block based copy on $ISCSI_PATH\n\n" >> $LOG
-if dd if=/dev/$VOLGRP/$LVSNAP of=/dev/disk/by-path/ip-10.110.1.140\:3260-iscsi-iqn.2012.bcs.bcsnas\:backuppc-lun-0 bs=16M 2>>$LOG:
+if dd if=/dev/$VOLGRP/$LVSNAP of=/dev/disk/by-path/ip-10.110.1.140\:3260-iscsi-iqn.2012.bcs.bcsnas\:backuppc-lun-0 bs=16M 2>>$LOG
   then
-    printf "snapshot cloned successfully\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup successful $(date +%Y%m%d\ %H:%M:%S)" $MAIL
+    printf "BackupPC snapshot cloned successfully on $(date +%Y%m%d\ %H:%M:%S)\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas poolbackup successful $(date +%Y%m%d\ %H:%M:%S)" $MAIL
   else
-    printf "snapshot clone failed\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
+    printf "BackupPC snapshot clone failed on $(date +%Y%m%d\ %H:%M:%S)\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas poolbackup failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
 fi
 sleep 5
 
