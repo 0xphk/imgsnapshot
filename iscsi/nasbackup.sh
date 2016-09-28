@@ -71,6 +71,7 @@ if ping -c3 backuppc1.bcs.bcs;
   else
     printf "backuppc1.bcs.bcs is NOT running, aborting & cleaning up! check this!\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] vm backuppc1.bcs.bcs NOT running/responding $(date +%Y%m%d\ %H:%M:%S)" $MAIL
     $ISCSI_CMD --logout >> $LOG
+    exit 1
 fi
 
 printf "stopping remote BackupPC process on backuppc1.bcs.bcs\n\n" >> $LOG
