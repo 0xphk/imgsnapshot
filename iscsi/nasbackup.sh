@@ -64,8 +64,8 @@ sleep 5
 
 ### check if vm is responsible, then stop remote BackupPC process, else exit 1
 printf "\n" >> $LOG
-printf "check if vm backuppc1.bcs.bcs is running\n\n" >> $LOG
-if ping -c3 backuppc1.bcs.bcs;
+printf "check if vm backuppc1.bcs.bcs is running:\n\n" >> $LOG
+if ping -c3 backuppc1.bcs.bcs 1>> $LOG;
   then
     printf "backuppc1.bcs.bcs is running, going on\n\n" >> $LOG
   else
