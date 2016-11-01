@@ -19,7 +19,7 @@ DATE=$(date +%Y%m%d)
 LOGDIR=/var/log/poolbackup
 LOG=$LOGDIR/nasbackup_$DATE.log
 PID=/var/run/backuppc/BackupPC.pid
-MAIL=backup@bcs.bcs
+MAIL=backup@delta.bcs
 VOLGRP=vgbackuppc
 LVORIGIN=backuppc
 LVSNAP=backuppc-snap
@@ -44,10 +44,9 @@ printf "$(date)\n\n" > $LOG
 
 ### connect to iSCSI target
 printf "logout from possible previous session $ISCSI_TARGET\n\n" >> $LOG
-$ISCSI_CMD --logout >> $LOG
+$ISCSI_CMD --logout 2>&1 >> $LOG
 sleep 5
 
-#exit 1
 printf "connecting to iSCSI target $ISCSI_TARGET\n\n" >> $LOG
 $ISCSI_CMD --login >> $LOG
 if [[ ! $? -eq 0 ]];
@@ -90,7 +89,9 @@ if [[ -f "$PID" ]];
           exit 1
       fi
   else
-    printf "BackupPC is not running\n\n" >> $LOG
+    printf "BackupPC is not running, unmounting pool\n\n" >> $LOG
+    umount -l /var/lib/backuppc # lazy unmount
+    printf "unmounted /var/lib/backuppc\n\n" >> $LOG
 fi
 
 ### check/create snapshot
@@ -153,14 +154,15 @@ if [[ $? -eq 0 ]];
     exit 1
 fi
 
-#printf "#dryrun#\n\n-----\n\n" >> $LOG
+#printf "dryrun\n\n---\n\n" >> $LOG
 printf "creating block based copy on $ISCSI_PATH\n\n" >> $LOG
-if dd if=/dev/$VOLGRP/$LVSNAP of=/dev/disk/by-path/ip-10.50.2.120\:3260-iscsi-iqn.2016.bcs.delta.backup\:backuppc-lun-0 bs=16M 2>>$LOG:
-#if true
+if dd if=/dev/$VOLGRP/$LVSNAP of=/dev/disk/by-path/ip-10.50.2.120\:3260-iscsi-iqn.2016.bcs.delta.backup\:backuppc-lun-0 bs=16M 2>>$LOG
   then
-    printf "BackupPC snapshot cloned successfully on $(date +%Y%m%d\ %H:%M:%S)\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup successful $(date +%Y%m%d\ %H:%M:%S)" $MAIL
+    printf "BackupPC snapshot cloned successfully on $(date +%Y%m%d\ %H:%M:%S)\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas poolbackup successful $(date +%Y%m%d\ %H:%M:%S)" $MAIL
   else
-    printf "snapshot clone failed\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
+    printf "BackupPC snapshot clone failed on $(date +%Y%m%d\ %H:%M:%S)\n\n" | tee -a $LOG | mail -s "[$CUSTOMER] nas backup failed $(date +%Y%m%d\ %H:%M:%S)" $MAIL
+    printf "\n" >> $LOG
+    printf "poolbackup faileded $(date)\n\n" >> $LOG
 fi
 sleep 5
 
